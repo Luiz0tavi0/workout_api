@@ -1,8 +1,9 @@
 from typing import AsyncGenerator
 
+import httpx
 import pytest
 import pytest_asyncio
-from httpx import AsyncClient
+from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -14,10 +15,12 @@ from workout_api.configs.database import get_session
 from workout_api.contrib.models import BaseModel
 from workout_api.main import app
 
+test_client = TestClient(app=app)
+
 
 @pytest.fixture(scope='session')
 def engine():
-    with PostgresContainer('postgres:17', 5548, driver='psycopg') as postgres:
+    with PostgresContainer('postgres:17', driver='psycopg') as postgres:
         database_url = postgres.get_connection_url()
         _engine = create_async_engine(database_url)
         yield _engine
@@ -35,14 +38,30 @@ async def session(engine: AsyncEngine):
         await conn.run_sync(BaseModel.metadata.drop_all)
 
 
-@pytest_asyncio.fixture(scope='function')
-async def client(session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
-    def override_session():
+@pytest_asyncio.fixture
+async def client(
+    session: AsyncSession,
+) -> AsyncGenerator[httpx.AsyncClient, None]:
+    async def get_session_override():
         yield session
 
-    app.dependency_overrides[get_session] = override_session
+    app.dependency_overrides[get_session] = get_session_override
+    transport = httpx.ASGITransport(app=app)
 
-    async with AsyncClient(base_url='http://localhost:8000') as client_test:
-        yield client_test
-
+    async with httpx.AsyncClient(
+        transport=transport, base_url='http://test'
+    ) as client:
+        yield client
     app.dependency_overrides.clear()
+
+
+# @pytest.fixture
+# def client(session):
+#     def get_session_override():
+#         return session
+
+#     with TestClient(app) as client:
+#         app.dependency_overrides[get_session] = get_session_override
+#         yield client
+
+#     app.dependency_overrides.clear()

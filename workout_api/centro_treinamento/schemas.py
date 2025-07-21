@@ -9,8 +9,8 @@ class CentroTreinamentoIn(BaseSchema):
     nome: Annotated[
         str,
         Field(
-            description='Nome do centro de treinamento',
-            example='CT King',
+            description="Nome do centro de treinamento",
+            examples=["CT King"],
             max_length=20,
         ),
     ]
@@ -18,7 +18,7 @@ class CentroTreinamentoIn(BaseSchema):
         str,
         Field(
             description='Endereço do centro de treinamento',
-            example='Rua X, Q02',
+            examples=['Rua X, Q02'],
             max_length=60,
         ),
     ]
@@ -26,7 +26,7 @@ class CentroTreinamentoIn(BaseSchema):
         str,
         Field(
             description='Proprietario do centro de treinamento',
-            example='Marcos',
+            examples=['Marcos'],
             max_length=30,
         ),
     ]
@@ -37,7 +37,7 @@ class CentroTreinamentoAtleta(BaseSchema):
         str,
         Field(
             description='Nome do centro de treinamento',
-            example='CT King',
+            examples=['CT King'],
             max_length=20,
         ),
     ]

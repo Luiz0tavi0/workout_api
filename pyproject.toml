@@ -23,6 +23,7 @@ ruff = "^0.12.4"
 pytest-cov = "^6.2.1"
 pytest-asyncio = "^1.1.0"
 testcontainers = "^4.10.0"
+ipdb = "^0.13.13"
 
 [tool.ruff]
 line-length = 79
@@ -40,6 +41,9 @@ quote-style = 'single'
 pythonpath = '.'
 addopts = '-p no:warnings'
 async_default_fixture_loop_scope = 'function'
+testpaths = ["tests"]
+asyncio_mode = "strict"
+anyio_backend = "asyncio"
 
 [tool.taskipy.tasks]
 lint = 'ruff check'
