@@ -4,7 +4,7 @@ from uuid import uuid4
 import ipdb
 from fastapi import APIRouter, Body, HTTPException, status
 from pydantic import UUID4
-from sqlalchemy.future import select
+from sqlalchemy import Select, select
 
 from workout_api.centro_treinamento.models import CentroTreinamentoModel
 from workout_api.centro_treinamento.schemas import (
@@ -47,12 +47,11 @@ async def post(
     response_model=List[CentroTreinamentoOut],
 )
 async def query(db_session: DatabaseDependency) -> List[CentroTreinamentoOut]:
-    stmt = select(CentroTreinamentoModel)
+    stmt: Select = select(CentroTreinamentoModel)
     centros_treinamento: Sequence[CentroTreinamentoModel] = (
         await db_session.scalars(stmt)
     ).all()
 
-    # Converter modelos SQLAlchemy para schemas Pydantic
     centros_treinamento_out = [
         CentroTreinamentoOut.model_validate(model)
         for model in centros_treinamento
@@ -70,7 +69,7 @@ async def query(db_session: DatabaseDependency) -> List[CentroTreinamentoOut]:
 async def get(
     id: UUID4, db_session: DatabaseDependency
 ) -> CentroTreinamentoOut:
-    stmt = select(CentroTreinamentoModel).filter_by(id=id)
+    stmt: Select = select(CentroTreinamentoModel).filter_by(id=id)
     result_query = await db_session.execute(stmt)
 
     centro_treinamento: Optional[CentroTreinamentoModel] = (

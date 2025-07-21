@@ -1,8 +1,9 @@
+from typing import List, Optional, Sequence
 from uuid import uuid4
 
 from fastapi import APIRouter, Body, HTTPException, status
 from pydantic import UUID4
-from sqlalchemy.future import select
+from sqlalchemy import Select, select
 
 from workout_api.categorias.models import CategoriaModel
 from workout_api.categorias.schemas import CategoriaIn, CategoriaOut
@@ -33,14 +34,13 @@ async def post(
     '/',
     summary='Consultar todas as Categorias',
     status_code=status.HTTP_200_OK,
-    response_model=list[CategoriaOut],
+    response_model=List[CategoriaOut],
 )
-async def query(db_session: DatabaseDependency) -> list[CategoriaOut]:
-    categorias: list[CategoriaOut] = (
-        (await db_session.execute(select(CategoriaModel))).scalars().all()
-    )
-
-    return categorias
+async def query(db_session: DatabaseDependency) -> List[CategoriaOut]:
+    stmt: Select = select(CategoriaModel)
+    query_result = await db_session.execute(stmt)
+    categorias: Sequence[CategoriaOut] = query_result.scalars().all()
+    return [CategoriaOut.model_validate(categoria) for categoria in categorias]
 
 
 @router.get(
@@ -50,11 +50,9 @@ async def query(db_session: DatabaseDependency) -> list[CategoriaOut]:
     response_model=CategoriaOut,
 )
 async def get(id: UUID4, db_session: DatabaseDependency) -> CategoriaOut:
-    categoria: CategoriaOut = (
-        (await db_session.execute(select(CategoriaModel).filter_by(id=id)))
-        .scalars()
-        .first()
-    )
+    stmt: Select = select(CategoriaModel).filter_by(id=id)
+    query_result = await db_session.execute(stmt)
+    categoria: Optional[CategoriaOut] = query_result.scalar()
 
     if not categoria:
         raise HTTPException(

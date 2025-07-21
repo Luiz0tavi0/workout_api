@@ -4,8 +4,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Body, HTTPException, status
 from pydantic import UUID4
-from sqlalchemy import Select
-from sqlalchemy.future import select
+from sqlalchemy import Select, select
 
 from workout_api.atleta.models import AtletaModel
 from workout_api.atleta.schemas import AtletaIn, AtletaOut, AtletaUpdate
