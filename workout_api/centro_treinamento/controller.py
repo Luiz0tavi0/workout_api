@@ -1,7 +1,6 @@
 from typing import List, Optional, Sequence
 from uuid import uuid4
 
-import ipdb
 from fastapi import APIRouter, Body, HTTPException, status
 from pydantic import UUID4
 from sqlalchemy import Select, select
@@ -26,7 +25,6 @@ async def post(
     db_session: DatabaseDependency,
     centro_treinamento_in: CentroTreinamentoIn = Body(...),
 ) -> CentroTreinamentoOut:
-    ipdb.set_trace()
     centro_treinamento_out = CentroTreinamentoOut(
         id=uuid4(), **centro_treinamento_in.model_dump()
     )
