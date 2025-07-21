@@ -57,5 +57,5 @@ class AtletaUpdate(BaseSchema):
     ]
     idade: Annotated[
         Optional[int],
-        Field(None, description='Idade do atleta', examples=[25]),
+        Field(description='Idade do atleta', examples=[25]),
     ]
