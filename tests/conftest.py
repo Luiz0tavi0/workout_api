@@ -11,6 +11,9 @@ from sqlalchemy.ext.asyncio import (
 )
 from testcontainers.postgres import PostgresContainer
 
+from tests.factory.atleta import AtletaModelFactory
+from tests.factory.categoria import CategoriaModelFactory
+from tests.factory.centro_treinamento import CentroTreinamentoModelFactory
 from workout_api.configs.database import get_session
 from workout_api.contrib.models import BaseModel
 from workout_api.main import app
@@ -53,3 +56,13 @@ async def client(
     ) as client:
         yield client
     app.dependency_overrides.clear()
+
+
+@pytest.fixture(autouse=True)
+def bind_factory_session(session: AsyncSession):
+    for factory in [
+        AtletaModelFactory,
+        CategoriaModelFactory,
+        CentroTreinamentoModelFactory,
+    ]:
+        setattr(factory._meta, 'sqlalchemy_session', session)

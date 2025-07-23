@@ -1,8 +1,10 @@
-from datetime import datetime
-from typing import List, Optional, Sequence
+import datetime
+from typing import Optional
 from uuid import uuid4
 
 from fastapi import APIRouter, Body, HTTPException, status
+from fastapi_pagination import Page
+from fastapi_pagination.ext.sqlalchemy import paginate
 from pydantic import UUID4
 from sqlalchemy import Select, select
 
@@ -10,7 +12,10 @@ from workout_api.atleta.models import AtletaModel
 from workout_api.atleta.schemas import AtletaIn, AtletaOut, AtletaUpdate
 from workout_api.categorias.models import CategoriaModel
 from workout_api.centro_treinamento.models import CentroTreinamentoModel
-from workout_api.contrib.dependencies import DatabaseDependency
+from workout_api.contrib.dependencies import (
+    DatabaseDependency,
+    ParamsDependency,
+)
 
 router = APIRouter()
 
@@ -63,7 +68,9 @@ async def post(
         )
     try:
         atleta_out = AtletaOut(
-            id=uuid4(), created_at=datetime.utcnow(), **atleta_in.model_dump()
+            id=uuid4(),
+            created_at=datetime.datetime.now(datetime.timezone.utc),
+            **atleta_in.model_dump(),
         )
         atleta_model = AtletaModel(
             **atleta_out.model_dump(
@@ -89,13 +96,15 @@ async def post(
     '/',
     summary='Consultar todos os Atletas',
     status_code=status.HTTP_200_OK,
-    response_model=List[AtletaOut],
+    response_model=Page[AtletaOut],
 )
-async def query(db_session: DatabaseDependency) -> List[AtletaOut]:
+async def query(
+    db_session: DatabaseDependency, params: ParamsDependency
+) -> Page[AtletaOut]:
     stmt = select(AtletaModel)
-    result_query = await db_session.execute(stmt)
-    atletas: Sequence[AtletaModel] = result_query.scalars().all()
-    return [AtletaOut.model_validate(atleta) for atleta in atletas]
+    page = await paginate(db_session, stmt, params=params)
+    page.items = [AtletaOut.model_validate(atleta) for atleta in page.items]
+    return page
 
 
 @router.get(

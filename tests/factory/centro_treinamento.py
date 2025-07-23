@@ -1,29 +1,25 @@
-import textwrap
+# pyright: reportAttributeAccessIssue=false
+# pyright: reportPrivateImportUsage=false
 
 import factory
-from faker import Faker
+from utils import fake_pt
 
+from tests.utils import corta
 from workout_api.centro_treinamento.models import CentroTreinamentoModel
 from workout_api.centro_treinamento.schemas import CentroTreinamentoIn
 
-fake_pt = Faker('pt_BR')
-
-
-def corta(texto: str, limite: int = 20) -> str:
-    return textwrap.shorten(texto, width=limite, placeholder='')
-
 
 class CentroTreinamentoBaseFactory(factory.Factory):
-    nome = factory.Sequence(lambda n: corta(f"{fake_pt.company()} {n}"))
+    nome = factory.Sequence(lambda n: corta(f'{fake_pt.company()} {n}'))
     endereco = factory.LazyAttribute(lambda _: corta(fake_pt.address(), 60))
     proprietario = factory.LazyAttribute(lambda _: corta(fake_pt.name(), 30))
 
 
 class CentroTreinamentoSchemaFactory(CentroTreinamentoBaseFactory):
-    class Meta:
+    class Meta:  # type: ignore[attr-defined]
         model = CentroTreinamentoIn
 
 
 class CentroTreinamentoModelFactory(CentroTreinamentoBaseFactory):
-    class Meta:
+    class Meta:  # type: ignore[attr-defined]
         model = CentroTreinamentoModel

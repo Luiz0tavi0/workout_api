@@ -1,8 +1,8 @@
-"""init_db
+"""initial
 
-Revision ID: c006e8463eb4
+Revision ID: 12b6aed6a26d
 Revises:
-Create Date: 2023-07-27 19:13:13.567144
+Create Date: 2025-07-23 17:11:04.246843
 
 """
 
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision = 'c006e8463eb4'
+revision = '12b6aed6a26d'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -46,7 +46,12 @@ def upgrade() -> None:
         sa.Column('peso', sa.Float(), nullable=False),
         sa.Column('altura', sa.Float(), nullable=False),
         sa.Column('sexo', sa.String(length=1), nullable=False),
-        sa.Column('created_at', sa.DateTime(), nullable=False),
+        sa.Column(
+            'created_at',
+            sa.DateTime(timezone=True),
+            server_default=sa.text("timezone('utc', now())"),
+            nullable=False,
+        ),
         sa.Column('categoria_id', sa.Integer(), nullable=False),
         sa.Column('centro_treinamento_id', sa.Integer(), nullable=False),
         sa.Column('id', sa.UUID(), nullable=False),
