@@ -53,15 +53,3 @@ async def client(
     ) as client:
         yield client
     app.dependency_overrides.clear()
-
-
-# @pytest.fixture
-# def client(session):
-#     def get_session_override():
-#         return session
-
-#     with TestClient(app) as client:
-#         app.dependency_overrides[get_session] = get_session_override
-#         yield client
-
-#     app.dependency_overrides.clear()

@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import (
     AsyncSession,
 )
 
+from tests.factory.centro_treinamento import CentroTreinamentoSchemaFactory
 from workout_api.centro_treinamento.models import CentroTreinamentoModel
 
 
@@ -15,21 +16,20 @@ async def test_create_training_center_persists_in_db(
     client: httpx.AsyncClient,
     session: AsyncSession,
 ):
-    payload = {
-        'nome': 'CT Teste',
-        'endereco': 'Rua Exemplo, 789',
-        'proprietario': 'João',
-    }
+    fake_ct = CentroTreinamentoSchemaFactory().dict()
 
-    response = await client.post('/centros_treinamento/', json=payload)
+    response = await client.post('/centros_treinamento/', json=fake_ct)
     assert response.status_code == HTTPStatus.CREATED
+
     stmt: Select = select(CentroTreinamentoModel).where(
-        CentroTreinamentoModel.nome == 'CT Teste'
+        CentroTreinamentoModel.nome == fake_ct['nome']
     )
     result = await session.execute(stmt)
     ct = result.scalar_one_or_none()
+
     assert ct is not None
-    assert ct.endereco == 'Rua Exemplo, 789'
+    assert ct.endereco == fake_ct['endereco']
+    assert ct.proprietario == fake_ct['proprietario']
 
 
 @pytest.mark.asyncio
