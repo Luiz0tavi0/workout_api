@@ -7,7 +7,10 @@ from sqlalchemy.ext.asyncio import (
     AsyncSession,
 )
 
-from tests.factory.centro_treinamento import CentroTreinamentoSchemaFactory
+from tests.factory.centro_treinamento import (
+    CentroTreinamentoModelFactory,
+    CentroTreinamentoSchemaFactory,
+)
 from workout_api.centro_treinamento.models import CentroTreinamentoModel
 
 
@@ -36,6 +39,11 @@ async def test_create_training_center_persists_in_db(
 async def test_get_training_center_success(
     client: httpx.AsyncClient, session: AsyncSession
 ):
+    qtd: int = 25
+    cts = CentroTreinamentoModelFactory.create_batch(qtd)
+    session.add_all(cts)
+    await session.commit()
     response = await client.get('/centros_treinamento/')
-
     assert response.status_code == HTTPStatus.OK
+    content: list = response.json()
+    assert len(content) == qtd
