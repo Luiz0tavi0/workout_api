@@ -66,3 +66,4 @@ def bind_factory_session(session: AsyncSession):
         CentroTreinamentoModelFactory,
     ]:
         setattr(factory._meta, 'sqlalchemy_session', session)
+        setattr(factory._meta, 'sqlalchemy_session_persistence', 'flush')

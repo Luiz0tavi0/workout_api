@@ -39,8 +39,6 @@ async def test_get_categorias_success(
     session.add_all(objs)
     await session.commit()
 
-    await session.commit()
-
     response = await client.get('/categorias/')
     assert response.status_code == HTTPStatus.OK
     content = response.json()
@@ -52,8 +50,10 @@ async def test_get_categorias_success(
 async def test_get_categoria_by_id_success(
     client: httpx.AsyncClient, session: AsyncSession
 ):
-    categoria = CategoriaModelFactory.create()
-    await session.commit()
+    categoria = CategoriaModelFactory.build()
+    session.add(categoria)
+    await session.flush()
+    # await session.commit()
     response = await client.get(f'/categorias/{categoria.id}')
     assert response.status_code == HTTPStatus.OK
     content = response.json()

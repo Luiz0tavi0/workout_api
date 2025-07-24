@@ -2,17 +2,25 @@ import datetime
 from typing import Optional
 from uuid import uuid4
 
-from fastapi import APIRouter, Body, HTTPException, status
+from fastapi import APIRouter, Body, Depends, HTTPException, status
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlalchemy import paginate
 from pydantic import UUID4
 from sqlalchemy import Select, select
+from sqlalchemy.orm import selectinload
 
 from workout_api.atleta.models import AtletaModel
-from workout_api.atleta.schemas import AtletaIn, AtletaOut, AtletaUpdate
+from workout_api.atleta.schemas import (
+    AtletaIn,
+    AtletaListagemOut,
+    AtletaOut,
+    AtletaUpdate,
+    get_filtro_query,
+)
 from workout_api.categorias.models import CategoriaModel
 from workout_api.centro_treinamento.models import CentroTreinamentoModel
 from workout_api.contrib.dependencies import (
+    AtletaFiltroQuery,
     DatabaseDependency,
     ParamsDependency,
 )
@@ -94,16 +102,27 @@ async def post(
 
 @router.get(
     '/',
-    summary='Consultar todos os Atletas',
+    summary='Filtra atleta por nome ou CPF',
     status_code=status.HTTP_200_OK,
-    response_model=Page[AtletaOut],
+    response_model=Page[AtletaListagemOut],
 )
 async def query(
-    db_session: DatabaseDependency, params: ParamsDependency
-) -> Page[AtletaOut]:
-    stmt = select(AtletaModel)
+    db_session: DatabaseDependency,
+    params: ParamsDependency,
+    filtro: AtletaFiltroQuery = Depends(get_filtro_query),
+) -> Page[AtletaListagemOut]:
+    stmt: Select = select(AtletaModel).options(
+        selectinload(AtletaModel.categoria),
+        selectinload(AtletaModel.centro_treinamento),
+    )
+    if filtro:
+        if filtro.cpf:
+            stmt = stmt.where(AtletaModel.cpf == filtro.cpf)
+        if filtro.nome:
+            stmt = stmt.where(AtletaModel.nome.ilike(f'%{filtro.nome}%'))
+
+    # First get the paginated results
     page = await paginate(db_session, stmt, params=params)
-    page.items = [AtletaOut.model_validate(atleta) for atleta in page.items]
     return page
 
 
@@ -114,6 +133,8 @@ async def query(
     response_model=AtletaOut,
 )
 async def get(id: UUID4, db_session: DatabaseDependency) -> AtletaOut:
+    # ipdb.set_trace()
+
     stmt: Select = select(AtletaModel).filter_by(id=id)
     query_result = await db_session.execute(stmt)
     atleta: Optional[AtletaOut] = query_result.scalars().first()

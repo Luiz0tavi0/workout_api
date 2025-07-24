@@ -1,7 +1,18 @@
+from http import HTTPStatus
 from typing import Annotated, Optional
 
-from pydantic import Field, PositiveFloat
+from fastapi import HTTPException, Query
+from pydantic import (
+    BaseModel,
+    Field,
+    PositiveFloat,
+    StringConstraints,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
 
+from workout_api.atleta.models import AtletaModel
 from workout_api.categorias.schemas import CategoriaIn
 from workout_api.centro_treinamento.schemas import CentroTreinamentoAtleta
 from workout_api.contrib.schemas import BaseSchema, OutMixin
@@ -45,6 +56,26 @@ class AtletaOut(Atleta, OutMixin):
     pass
 
 
+class AtletaListagemOut(OutMixin):
+    nome: str
+    cpf: str
+    categoria: str
+    centro_treinamento: str
+
+    @model_validator(mode='before')
+    @classmethod
+    def validate_model(cls, data):
+        if isinstance(data, AtletaModel):
+            return {
+                'id': data.id,
+                'created_at': data.created_at,
+                'nome': data.nome,
+                'cpf': data.cpf,
+                'categoria': data.categoria.nome,
+                'centro_treinamento': data.centro_treinamento.nome,
+            }
+
+
 class AtletaUpdate(BaseSchema):
     nome: Annotated[
         Optional[str],
@@ -59,3 +90,46 @@ class AtletaUpdate(BaseSchema):
         Optional[int],
         Field(None, description='Idade do atleta', examples=[25]),
     ]
+
+
+class AtletaFiltroSchema(BaseModel):
+    nome: Optional[
+        Annotated[
+            str,
+            StringConstraints(strip_whitespace=True, max_length=50),
+        ]
+    ] = None
+    cpf: Optional[
+        Annotated[
+            str, StringConstraints(strip_whitespace=True, pattern=r'^\d{11}$')
+        ]
+    ] = None
+
+    @field_validator('cpf')
+    def validar_cpf(cls, v):
+        if v is not None and len(set(v)) == 1:
+            raise ValueError('CPF não pode ter todos os dígitos iguais')
+        return v
+
+
+def get_filtro_query(
+    nome: Optional[str] = Query(None),
+    cpf: Optional[str] = Query(None),
+) -> Optional[AtletaFiltroSchema]:
+    try:
+        if nome is None and cpf is None:
+            return None
+        return AtletaFiltroSchema(nome=nome, cpf=cpf)
+    except ValidationError as e:
+        formatted_errors = [
+            {
+                'loc': error['loc'],
+                'msg': error['msg'],
+                'type': error['type'],
+            }
+            for error in e.errors()
+        ]
+        raise HTTPException(
+            status_code=HTTPStatus.UNPROCESSABLE_ENTITY,
+            detail=formatted_errors,
+        )
