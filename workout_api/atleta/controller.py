@@ -7,6 +7,7 @@ from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlalchemy import paginate
 from pydantic import UUID4
 from sqlalchemy import Select, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
 from workout_api.atleta.models import AtletaModel
@@ -39,34 +40,18 @@ async def post(
 ):
     categoria_nome = atleta_in.categoria.nome
     centro_treinamento_nome = atleta_in.centro_treinamento.nome
-
-    categoria = (
-        (
-            await db_session.execute(
-                select(CategoriaModel).filter_by(nome=categoria_nome)
-            )
-        )
-        .scalars()
-        .first()
-    )
+    stmt: Select = select(CategoriaModel).filter_by(nome=categoria_nome)
+    categoria = (await db_session.execute(stmt)).scalars().first()
 
     if not categoria:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'A categoria {categoria_nome} não foi encontrada.',
         )
-
-    centro_treinamento = (
-        (
-            await db_session.execute(
-                select(CentroTreinamentoModel).filter_by(
-                    nome=centro_treinamento_nome
-                )
-            )
-        )
-        .scalars()
-        .first()
+    stmt: Select = select(CentroTreinamentoModel).filter_by(
+        nome=centro_treinamento_nome
     )
+    centro_treinamento = (await db_session.execute(stmt)).scalars().first()
 
     if not centro_treinamento:
         raise HTTPException(
@@ -74,6 +59,7 @@ async def post(
             detail=f'O centro de treinamento {centro_treinamento_nome}'
             ' não foi encontrado.',
         )
+    cpf_atleta: str = atleta_in.cpf
     try:
         atleta_out = AtletaOut(
             id=uuid4(),
@@ -91,10 +77,10 @@ async def post(
 
         db_session.add(atleta_model)
         await db_session.commit()
-    except Exception:
+    except IntegrityError:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail='Ocorreu um erro ao inserir os dados no banco',
+            status_code=status.HTTP_303_SEE_OTHER,
+            detail=f'Já existe um atleta cadastrado com o cpf: {cpf_atleta}',
         )
 
     return atleta_out
@@ -133,8 +119,6 @@ async def query(
     response_model=AtletaOut,
 )
 async def get(id: UUID4, db_session: DatabaseDependency) -> AtletaOut:
-    # ipdb.set_trace()
-
     stmt: Select = select(AtletaModel).filter_by(id=id)
     query_result = await db_session.execute(stmt)
     atleta: Optional[AtletaOut] = query_result.scalars().first()

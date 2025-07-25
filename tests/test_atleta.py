@@ -54,7 +54,64 @@ async def test_post_atleta_categoria_not_found(
 
     response = await client.post('/atletas/', json=atleta_payload)
     assert response.status_code == HTTPStatus.BAD_REQUEST
-    assert 'categoria' in response.json()['detail']
+    assert 'não foi encontrada' in response.json()['detail'].lower()
+
+
+@pytest.mark.asyncio
+async def test_post_atleta_centro_treinamento_not_found(
+    client: httpx.AsyncClient, session: AsyncSession
+):
+    categoria = CategoriaModelFactory.build()
+    centro = CentroTreinamentoModelFactory.build()
+    session.add_all([categoria, centro])
+    await session.commit()
+    atleta_payload = AtletaSchemaFactory(
+        categoria={'nome': categoria.nome},
+        centro_treinamento={'nome': 'ct inexistente'},
+    ).model_dump()
+
+    response = await client.post('/atletas/', json=atleta_payload)
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    assert 'não foi encontrado' in response.json()['detail'].lower()
+
+
+@pytest.mark.asyncio
+async def test_post_atleta_ja_existente(
+    client: httpx.AsyncClient, session: AsyncSession
+):
+    categoria0 = CategoriaModelFactory.build()
+    centro_treinamento0 = CentroTreinamentoModelFactory.build()
+    categoria1 = CategoriaModelFactory.build()
+    centro_treinamento1 = CentroTreinamentoModelFactory.build()
+    session.add_all([
+        categoria0,
+        centro_treinamento0,
+        categoria1,
+        centro_treinamento1,
+    ])
+    await session.flush()
+
+    atleta = AtletaModelFactory.create(
+        categoria_id=categoria0.pk_id,
+        centro_treinamento_id=centro_treinamento0.pk_id,
+    )
+    await session.commit()
+
+    atleta_payload = AtletaSchemaFactory.build(
+        cpf=atleta.cpf,  # Usa o mesmo CPF
+        categoria__nome=categoria1.nome,
+        centro_treinamento__nome=centro_treinamento1.nome,
+    ).model_dump()
+
+    response = await client.post('/atletas/', json=atleta_payload)
+    cpf_atleta = atleta_payload['cpf']
+
+    assert response.status_code == HTTPStatus.SEE_OTHER
+
+    assert (
+        response.json()['detail'].lower()
+        == f'Já existe um atleta cadastrado com o cpf: {cpf_atleta}'.lower()
+    )
 
 
 @pytest.mark.asyncio
