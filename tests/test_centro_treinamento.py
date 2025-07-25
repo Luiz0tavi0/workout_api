@@ -14,7 +14,7 @@ from workout_api.centro_treinamento.models import CentroTreinamentoModel
 
 
 @pytest.mark.asyncio
-async def test_create_centro_treinamento_persists_in_db(
+async def test_create_centro_treinamento_success(
     client: httpx.AsyncClient, session: AsyncSession
 ):
     payload = CentroTreinamentoSchemaFactory().model_dump()
@@ -31,6 +31,29 @@ async def test_create_centro_treinamento_persists_in_db(
     assert ct is not None
     assert ct.endereco == payload['endereco']
     assert ct.proprietario == payload['proprietario']
+
+
+@pytest.mark.asyncio
+async def test_create_centro_treinamento_fail(
+    client: httpx.AsyncClient, session: AsyncSession
+):
+    centro_treinamento: CentroTreinamentoModel = (
+        CentroTreinamentoModelFactory.build()
+    )
+    session.add(centro_treinamento)
+    await session.flush()
+    payload = CentroTreinamentoSchemaFactory.build(
+        nome=centro_treinamento.nome
+    ).model_dump()
+
+    response = await client.post('/centros_treinamento/', json=payload)
+    data = response.json()
+
+    assert response.status_code == HTTPStatus.SEE_OTHER
+    assert (
+        f'Já existe uma categoria cadastrada com o nome: {payload["nome"]}'
+        in data['detail']
+    )
 
 
 @pytest.mark.asyncio

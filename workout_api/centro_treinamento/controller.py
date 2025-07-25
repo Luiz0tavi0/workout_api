@@ -4,6 +4,7 @@ from uuid import uuid4
 from fastapi import APIRouter, Body, HTTPException, status
 from pydantic import UUID4
 from sqlalchemy import Select, select
+from sqlalchemy.exc import IntegrityError
 
 from workout_api.centro_treinamento.models import CentroTreinamentoModel
 from workout_api.centro_treinamento.schemas import (
@@ -31,9 +32,17 @@ async def post(
     centro_treinamento_model = CentroTreinamentoModel(
         **centro_treinamento_out.model_dump()
     )
-
     db_session.add(centro_treinamento_model)
-    await db_session.commit()
+    try:
+        await db_session.commit()
+    except IntegrityError:
+        raise HTTPException(
+            status_code=status.HTTP_303_SEE_OTHER,
+            detail=(
+                'Já existe uma categoria cadastrada'
+                f' com o nome: {centro_treinamento_model.nome}'
+            ),
+        )
 
     return centro_treinamento_out
 
