@@ -1,7 +1,9 @@
-from typing import List, Optional, Sequence
+from typing import Optional
 from uuid import uuid4
 
 from fastapi import APIRouter, Body, HTTPException, status
+from fastapi_pagination import Page
+from fastapi_pagination.ext.sqlalchemy import paginate
 from pydantic import UUID4
 from sqlalchemy import Select, select
 from sqlalchemy.exc import IntegrityError
@@ -11,7 +13,10 @@ from workout_api.centro_treinamento.schemas import (
     CentroTreinamentoIn,
     CentroTreinamentoOut,
 )
-from workout_api.contrib.dependencies import DatabaseDependency
+from workout_api.contrib.dependencies import (
+    DatabaseDependency,
+    ParamsDependency,
+)
 
 router = APIRouter()
 
@@ -51,20 +56,14 @@ async def post(
     '/',
     summary='Consultar todos os centros de treinamento',
     status_code=status.HTTP_200_OK,
-    response_model=List[CentroTreinamentoOut],
+    response_model=Page[CentroTreinamentoOut],
 )
-async def query(db_session: DatabaseDependency) -> List[CentroTreinamentoOut]:
+async def query(
+    db_session: DatabaseDependency, params: ParamsDependency
+) -> Page[CentroTreinamentoOut]:
     stmt: Select = select(CentroTreinamentoModel)
-    centros_treinamento: Sequence[CentroTreinamentoModel] = (
-        await db_session.scalars(stmt)
-    ).all()
-
-    centros_treinamento_out = [
-        CentroTreinamentoOut.model_validate(model)
-        for model in centros_treinamento
-    ]
-
-    return centros_treinamento_out
+    page = await paginate(db_session, stmt, params=params)
+    return page
 
 
 @router.get(

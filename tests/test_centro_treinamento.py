@@ -10,6 +10,7 @@ from tests.factory.centro_treinamento import (
     CentroTreinamentoModelFactory,
     CentroTreinamentoSchemaFactory,
 )
+from tests.utils import gerar_casos_paginacao
 from workout_api.centro_treinamento.models import CentroTreinamentoModel
 
 
@@ -57,19 +58,31 @@ async def test_create_centro_treinamento_fail(
 
 
 @pytest.mark.asyncio
-async def test_get_centro_treinamento_success(
-    client: httpx.AsyncClient, session: AsyncSession
+@pytest.mark.parametrize(
+    ('qtd', 'page', 'total_pages', 'size'), gerar_casos_paginacao(55)
+)
+async def test_get_centro_treinamento_success(  # noqa: PLR0913, PLR0917
+    client: httpx.AsyncClient,
+    session: AsyncSession,
+    qtd,
+    page,
+    total_pages,
+    size,
 ):
-    qtd = 5
     cts = CentroTreinamentoModelFactory.create_batch(qtd)
     session.add_all(cts)
     await session.commit()
 
-    response = await client.get('/centros_treinamento/')
+    response = await client.get(
+        '/centros_treinamento/', params={'page': page, 'size': size}
+    )
     assert response.status_code == HTTPStatus.OK
-    content = response.json()
-    assert isinstance(content, list)
-    assert len(content) == qtd
+    data = response.json()
+    assert data['items']
+    assert data['total'] == qtd
+    assert data['page'] == page
+    assert data['pages'] == total_pages
+    assert data['size'] == size
 
 
 @pytest.mark.asyncio
@@ -127,5 +140,4 @@ async def test_create_centro_treinamento_field_length_validation(
 
     response = await client.post('/centros_treinamento/', json=payload)
     assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
-    # ipdb.set_trace()
     assert any(field in str(err['loc']) for err in response.json()['detail'])

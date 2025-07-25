@@ -10,7 +10,10 @@ from workout_api.centro_treinamento.schemas import CentroTreinamentoIn
 
 
 class CentroTreinamentoBaseFactory(factory.Factory):
-    nome = factory.Sequence(lambda n: corta(f'{fake_pt.company()} {n}'))
+    nome = factory.Sequence(
+        lambda n: corta(f'ct_{n} {fake_pt.company()[:44]}', 20)
+    )
+
     endereco = factory.LazyAttribute(lambda _: corta(fake_pt.address(), 60))
     proprietario = factory.LazyAttribute(lambda _: corta(fake_pt.name(), 30))
 

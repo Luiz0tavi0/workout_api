@@ -107,7 +107,6 @@ async def query(
         if filtro.nome:
             stmt = stmt.where(AtletaModel.nome.ilike(f'%{filtro.nome}%'))
 
-    # First get the paginated results
     page = await paginate(db_session, stmt, params=params)
     return page
 

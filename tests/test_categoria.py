@@ -10,6 +10,7 @@ from tests.factory.categoria import (
     CategoriaModelFactory,
     CategoriaSchemaFactory,
 )
+from tests.utils import gerar_casos_paginacao
 from workout_api.categorias.models import CategoriaModel
 
 
@@ -35,15 +36,49 @@ async def test_get_categorias_success(
     client: httpx.AsyncClient, session: AsyncSession
 ):
     qtd = 5
+    page = 1
+    pages = 1
+    size = 50
     objs = [CategoriaModelFactory.build() for _ in range(5)]
     session.add_all(objs)
     await session.commit()
 
     response = await client.get('/categorias/')
     assert response.status_code == HTTPStatus.OK
-    content = response.json()
-    assert isinstance(content, list)
-    assert len(content) == qtd
+    data = response.json()
+    assert data['items']
+    assert data['total'] == qtd
+    assert data['page'] == page
+    assert data['pages'] == pages
+    assert data['size'] == size
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ('qtd', 'page', 'total_pages', 'size'), gerar_casos_paginacao(55)
+)
+async def test_get_categorias_com_paginacao_success(  # noqa: PLR0913, PLR0917
+    client: httpx.AsyncClient,
+    session: AsyncSession,
+    qtd,
+    page,
+    total_pages,
+    size,
+):
+    objs = [CategoriaModelFactory.build() for _ in range(qtd)]
+    session.add_all(objs)
+    await session.commit()
+
+    response = await client.get(
+        '/categorias/', params={'page': page, 'size': size}
+    )
+    assert response.status_code == HTTPStatus.OK
+    data = response.json()
+    assert data['items']
+    assert data['total'] == qtd
+    assert data['page'] == page
+    assert data['pages'] == total_pages
+    assert data['size'] == size
 
 
 @pytest.mark.asyncio

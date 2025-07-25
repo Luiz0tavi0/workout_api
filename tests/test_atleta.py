@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from tests.factory.atleta import AtletaModelFactory, AtletaSchemaFactory
 from tests.factory.categoria import CategoriaModelFactory
 from tests.factory.centro_treinamento import CentroTreinamentoModelFactory
+from tests.utils import gerar_casos_paginacao
 from workout_api.atleta.schemas import get_filtro_query
 from workout_api.contrib.dependencies import AtletaFiltroQuery
 
@@ -115,34 +116,46 @@ async def test_post_atleta_ja_existente(
 
 
 @pytest.mark.asyncio
-async def test_get_atletas_success(
-    client: httpx.AsyncClient, session: AsyncSession
+@pytest.mark.parametrize(
+    ('qtd', 'page', 'total_pages', 'size'), gerar_casos_paginacao(55)
+)
+async def test_get_atletas_success(  # noqa: PLR0913, PLR0917
+    client: httpx.AsyncClient,
+    session: AsyncSession,
+    qtd,
+    page,
+    total_pages,
+    size,
 ):
-    qtd = 15
-    size = 10
-    n_page = 1
-
+    categorias = [CategoriaModelFactory.build() for _ in range(qtd)]
+    centros_treinamento = [
+        CentroTreinamentoModelFactory.build() for _ in range(qtd)
+    ]
+    session.add_all([
+        *categorias,
+        *centros_treinamento,
+    ])
+    await session.flush()
     atletas = []
-    for _ in range(qtd):
-        atleta = AtletaModelFactory.build()
-        session.add(atleta.categoria)
-        session.add(atleta.centro_treinamento)
-        session.add(atleta)
+    for cat, ct in zip(categorias, centros_treinamento):
+        atleta = AtletaModelFactory.create(
+            categoria=cat,
+            centro_treinamento_id=ct,
+        )
         atletas.append(atleta)
-
+    session.add_all(atletas)
     await session.commit()
 
     response = await client.get(
-        '/atletas/', params={'page': n_page, 'size': size}
+        '/atletas/', params={'page': page, 'size': size}
     )
 
     assert response.status_code == HTTPStatus.OK
     data = response.json()
-
     assert data['items']
-    assert len(data['items']) == size
     assert data['total'] == qtd
-    assert data['page'] == n_page
+    assert data['page'] == page
+    assert data['pages'] == total_pages
     assert data['size'] == size
 
 
